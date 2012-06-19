@@ -12,7 +12,7 @@ int main()
   FILE *fp;
   int i = 0;
   boolean mflg = UNREADY;
-  char m[1024], a[64], *b;
+  char m[1024], a[64], *b, *p;
 
   fp = fopen("/tmp/maillog", "a+");
 
@@ -25,8 +25,18 @@ int main()
 	  strncpy(mdata.from, b, strlen(b));
 
 	  while(fgets(a, 64, fp))
-	    if(strcmp(mdata.from, a) == 0 &&
-	       strstr(mdata.from, a) != NULL) goto end;
+	    {
+	      /* 文字列の先頭から改行文字を検索 */
+	      if((p = strchr(a, '\n')) != NULL) *p = '\0';
+	      printf("mdata.from => %-30s:%d\n", mdata.from, (int)strlen(mdata.from));
+	      printf("p          => %-30s:%d\n", p, (int)strlen(p));
+
+	      if(strncmp(mdata.from, p, strlen(p)) == 0 && strlen(p) > 0)
+		{
+		  printf("break!!");
+		  goto end;
+		}
+	    }
 	}
 
       else if((b = strstr(m, "Subject: ")))
@@ -38,15 +48,14 @@ int main()
 
       else if(strcmp(m, "") == 0 || mflg == READ)
 	{
-	  if(mflg == UNREADY) mflg = READY;
-	  else if(mflg == READY) mflg = READ;
-	  else strcat(mdata.message, m);
+	  mflg = READ;
+	  strcat(mdata.message, m);
 	}
 
       i++;
     }
 
-  fprintf(fp, "%s", mdata.from);
+  fprintf(fp, "%s\n", mdata.from);
 
   sendm(mdata);
 
