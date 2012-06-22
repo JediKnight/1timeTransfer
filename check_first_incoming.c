@@ -1,66 +1,70 @@
 #include "check_first_incoming.h"
 #include "mail.h"
 
+int addlog(const char *addr)
+{
+  FILE *fp;
+
+  fp = fopen("/tmp/maillog", "a");
+  fprintf(fp, "%s\n", addr);
+  fclose(fp);
+
+  return 0;
+}
+
+boolean searchlog(const char *addr)
+{
+  FILE *fp;
+  boolean flg = FALSE;
+  char *ptr;
+  char buf[ADLEN];
+
+  fp = fopen("/tmp/maillog", "r");
+  while(fgets(buf, ADLEN, fp))
+    {
+      if((ptr = strchr(buf, '\n')) != NULL) *ptr = '\0';
+      if(strncmp(addr, ptr, strlen(ptr)) == 0) flg = TRUE;
+    }
+  
+  fclose(fp);
+  
+  return flg;
+}
+
 int main()
 {
-  Mail_Data mdata = { .serv = "localhost",
-		      .port = 25,
-		      .from[0] = NULSTR,
-		      .to = MYADDR,
-		      .subject[0] = NULSTR,
-		      .message[0] = NULSTR };
-  FILE *fp;
-  int i = 0;
-  boolean mflg = UNREADY;
-  char m[1024], a[64], *b, *p;
+  Mail_Data md = { .serv = "localhost", .port = 25, .from[0] = NULSTR, .to = MYADDR, .subject[0] = NULSTR, .message[0] = NULSTR };
+  boolean rflg = FALSE;;
+  char *mdata;
+  char *addr;
 
-  fp = fopen("/tmp/maillog", "a+");
-
-  while(fgets(m, 1024, stdin))
+  while(fgets(mdata, MSIZE, stdin))
     {
-      if((b = strstr(m, "Return-Path: ")))
+      if((addr = strstr(mdata, "Return-Path: ")))
 	{
-	  strtok(b, "<");
-	  b = strtok(NULL, ">");
-	  strncpy(mdata.from, b, strlen(b));
-
-	  while(fgets(a, 64, fp))
-	    {
-	      /* 文字列の先頭から改行文字を検索 */
-	      if((p = strchr(a, '\n')) != NULL) *p = '\0';
-	      printf("mdata.from => %-30s:%d\n", mdata.from, (int)strlen(mdata.from));
-	      printf("p          => %-30s:%d\n", p, (int)strlen(p));
-
-	      if(strncmp(mdata.from, p, strlen(p)) == 0 && strlen(p) > 0)
-		{
-		  printf("break!!");
-		  goto end;
-		}
-	    }
+	  strtok(mdata, "<");
+	  addr = strtok(NULL, ">");
+	  strncpy(md.from, addr, strlen(addr));
+	  if(searchlog(md.from)) goto end;
 	}
 
-      else if((b = strstr(m, "Subject: ")))
+      else if((addr = strstr(mdata, "Subject: ")))
 	{
-	  strtok(b, " ");
-	  b = strtok(NULL, " ");
-	  strncpy(mdata.subject, b, strlen(b));
+	  strtok(addr, " ");
+	  addr = strtok(NULL, " ");
+	  strncpy(md.subject, addr, strlen(addr));
 	}
 
-      else if(strcmp(m, "") == 0 || mflg == READ)
+      else if(strcmp(mdata, "") == 0 || rflg == TRUE)
 	{
-	  mflg = READ;
-	  strcat(mdata.message, m);
+	  rflg = TRUE;
+	  strcat(md.message, mdata);
 	}
-
-      i++;
     }
 
-  fprintf(fp, "%s\n", mdata.from);
-
-  sendm(mdata);
+  sendm(md);
 
  end:
-  fclose(fp);
 
   return 0;
 }

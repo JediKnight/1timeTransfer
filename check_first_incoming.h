@@ -8,9 +8,16 @@
 #undef MYADDR
 #define MYADDR "batman_vs_battamon@bamboo-copter.com"
 
+#undef ADLEN
+#define ADLEN 64
+
+#undef MSIZE
+#define MSIZE 1024
+
 typedef int boolean;
-const boolean READY = -1;
-const boolean READ = 1;
-const boolean UNREADY = 0;
+#undef FALSE
+#undef TRUE
+const boolean FALSE = 0;
+const boolean TRUE = 1;
 
 #endif /* _CHECK_FIRST_INCOMING_ */
